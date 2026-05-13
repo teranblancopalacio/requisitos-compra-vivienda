@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Inmobiliaria Inversa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Reglas específicas para la generación del PDF */
+        @media print {
+            .no-print { display: none !important; }
+            * { 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            body { background-color: white !important; }
+            main { display: block !important; } /* Apila las columnas para formato A4 */
+            .lg\:col-span-5, .lg\:col-span-7, .lg\:col-span-12 { 
+                margin-bottom: 2rem !important; 
+                page-break-inside: avoid; /* Evita que las tarjetas se corten a la mitad de la página */
+            }
+            #debug_content { display: grid !important; } /* Fuerza a que la auditoría salga siempre en el PDF */
+            
+            /* Ajustes estéticos menores para papel */
+            .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #e2e8f0; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen pb-12">
+
+    <header class="bg-brand-900 text-white py-8 shadow-md">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-baseline">
+            <h1 class="text-3xl font-bold tracking-tight">Calculadora Inversa</h1>
+        </div>
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <p class="text-brand-100 text-lg">Descubre los ahorros e ingresos exactos que necesitas para la casa que quieres.</p>
+            
+            <!-- Botón de Generar PDF -->
+            <button onclick="window.print()" class="no-print bg-white text-brand-900 px-5 py-2.5 rounded-lg shadow-sm font-semibold text-sm hover:bg-brand-50 transition flex items-center w-fit">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Generar Informe PDF
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-5 space-y-6">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    Datos de la Operación
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Precio de Compra Deseado</label>
+                        <div class="relative">
+                            <input type="number" id="precio_compra" value="250000" step="5000" class="w-full rounded-lg border-slate-300 border p-2.5 pl-8 text-lg font-semibold focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                            <span class="absolute left-3 top-3 text-slate-400 font-semibold">€</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Comunidad Autónoma</label>
+                        <select id="ccaa" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Tipo de Inmueble</label>
+                        <select id="tipo_inmueble" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                            <option value="segunda_mano">Segunda Mano (ITP)</option>
+                            <option value="obra_nueva_libre">Obra Nueva Libre (IVA 10%)</option>
+                            <option value="obra_nueva_vpo">Obra Nueva VPO (IVA 4%)</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Edad Mayor Comprador</label>
+                            <input type="number" id="edad" value="35" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">¿Inversor (Flipping)?</label>
+                            <select id="flipping" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                                <option value="no">No</option>
+                                <option value="si">Sí (Reventa)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Condiciones Personalizadas
+                </h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">% Financiación (LTV)</label>
+                            <div class="relative">
+                                <input type="number" id="ltv_input" value="80" step="1" class="w-full rounded-lg border-slate-300 border p-2.5 pr-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                                <span class="absolute right-3 top-2.5 text-slate-400">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">% Ratio Endeud.</label>
+                            <div class="relative">
+                                <input type="number" id="dti_input" value="35" step="1" class="w-full rounded-lg border-slate-300 border p-2.5 pr-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                                <span class="absolute right-3 top-2.5 text-slate-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Deudas Actuales (Préstamos/mes)</label>
+                        <div class="relative">
+                            <input type="number" id="deudas" value="300" class="w-full rounded-lg border-slate-300 border p-2.5 pl-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                            <span class="absolute left-3 top-2.5 text-slate-400">€</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Tipo de Interés</label>
+                            <div class="relative">
+                                <input type="number" step="0.1" id="interes" value="2.8" class="w-full rounded-lg border-slate-300 border p-2.5 pr-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                                <span class="absolute right-3 top-2.5 text-slate-400">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Plazo (Años)</label>
+                            <input type="number" id="plazo" value="30" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-6">
+            <div class="bg-slate-800 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-brand-600 rounded-full opacity-30 blur-3xl"></div>
+                <h2 class="text-slate-300 text-lg font-medium mb-6 uppercase tracking-wider text-center border-b border-slate-700 pb-4">Tus Requisitos Mínimos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-sm">
+                        <p class="text-brand-200 text-sm mb-2 font-medium">Ahorros Necesarios</p>
+                        <div class="text-4xl lg:text-5xl font-bold tracking-tight text-white mb-1" id="res_ahorros_req">0 €</div>
+                        <p class="text-xs text-slate-400">Entrada + Impuestos + Gastos</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-sm">
+                        <p class="text-brand-200 text-sm mb-2 font-medium">Ingresos Netos del Hogar</p>
+                        <div class="text-4xl lg:text-5xl font-bold tracking-tight text-white mb-1"><span id="res_ingresos_req">0 €</span><span class="text-xl text-slate-400 font-normal">/mes</span></div>
+                        <p class="text-xs text-slate-400" id="res_dti_label">Bajo ratio del 35%</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-6 border-t border-slate-700 pt-6 mt-2">
+                    <div>
+                        <p class="text-slate-400 text-sm mb-1" id="res_ltv_label">Préstamo a pedir (80%)</p>
+                        <p class="text-2xl font-semibold text-slate-100" id="res_prestamo">0 €</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 text-sm mb-1">Cuota Mensual</p>
+                        <p class="text-2xl font-semibold text-slate-100" id="res_cuota">0 €</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Desglose de Ahorros</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                        <span class="text-slate-600 font-medium">Entrada (Capital no financiado)</span>
+                        <span class="font-semibold text-slate-800" id="res_entrada">0 €</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-red-50/50 rounded-lg">
+                        <span class="text-slate-600 font-medium">Impuestos (<span id="label_impuesto">ITP</span>)</span>
+                        <span class="font-semibold text-red-600" id="res_impuestos">0 €</span>
+                    </div>
+                    <div id="row_ajd" class="flex justify-between items-center p-3 bg-red-50/50 rounded-lg hidden">
+                        <span class="text-slate-600 font-medium">AJD</span>
+                        <span class="font-semibold text-red-600" id="res_ajd">0 €</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                        <span class="text-slate-600 font-medium">Gastos de Notaría y Registro (~1.5%)</span>
+                        <span class="font-semibold text-slate-800" id="res_gastos_fijos">0 €</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-12 bg-slate-900 text-slate-300 p-6 rounded-2xl shadow-sm mt-4 border border-slate-800 font-mono text-sm">
+            <h3 class="text-lg font-semibold text-white mb-4 border-b border-slate-700 pb-2 flex items-center justify-between">
+                <span>Panel de Auditoría Matemática (Variables Dinámicas)</span>
+                <!-- Le añadimos la clase no-print para que este botón desaparezca en el PDF -->
+                <button id="toggle_debug" class="no-print text-xs bg-slate-700 text-white px-3 py-1.5 rounded border border-slate-600 hover:bg-slate-600 transition">Ocultar / Mostrar</button>
+            </h3>
+            <div id="debug_content" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                
+                <!-- Columna 1: Ahorros -->
+                <div class="space-y-4">
+                    <div class="bg-slate-800 p-4 rounded-lg shadow-inner">
+                        <p class="text-brand-400 font-bold mb-2">1. Cálculo de Ahorros Mínimos</p>
+                        <p class="text-xs text-slate-400 mb-3 border-b border-slate-700 pb-2">Desglose de requerimientos de liquidez para Precio (P) = <span id="dbg_precio_p" class="text-white">0</span> €</p>
+                        
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span>A. Entrada (No financiado: <span id="dbg_entrada_pct">20</span>%)</span>
+                                <span class="text-white" id="dbg_entrada">0 €</span>
+                            </div>
+                            <div class="flex justify-between text-slate-400">
+                                <span>B. Regla Fiscal Aplicada:</span>
+                                <span id="dbg_regla_impuesto" class="text-right">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>&nbsp;&nbsp;&nbsp;Total Impuestos (<span id="dbg_tipo_impuesto">-</span>)</span>
+                                <span class="text-white" id="dbg_taxes">0 €</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>C. Gastos Fijos (P * 1.5%)</span>
+                                <span class="text-white" id="dbg_gastos">0 €</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-600 flex justify-between font-bold text-sm">
+                            <span class="text-brand-300">Sumatorio (A + B + C) =</span>
+                            <span class="text-brand-300" id="dbg_ahorros_totales">0 €</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna 2: Ingresos -->
+                <div class="space-y-4">
+                    <div class="bg-slate-800 p-4 rounded-lg shadow-inner">
+                        <p class="text-brand-400 font-bold mb-2">2. Cálculo de Ingresos Mínimos</p>
+                        <p class="text-xs text-slate-400 mb-3 border-b border-slate-700 pb-2">Inversión de la fórmula de Ratio de Endeudamiento (Límite <span id="dbg_dti_val_title">35</span>%)</p>
+                        
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span>A. Capital Hipoteca (P * <span id="dbg_ltv_val">80</span>%)</span>
+                                <span class="text-white" id="dbg_prestamo_cap">0 €</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>B. Cuota (Fórmula PMT)</span>
+                                <span class="text-white" id="dbg_cuota_calc">0 €</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>&nbsp;&nbsp;&nbsp;[r=<span id="dbg_tasa">0</span> mensual, n=<span id="dbg_meses">0</span> meses]</span>
+                            </div>
+                            <div class="flex justify-between mt-1">
+                                <span class="text-red-400">C. Deudas Previas (+ sumar)</span>
+                                <span class="text-red-400" id="dbg_deudas_calc">0 €</span>
+                            </div>
+                            <div class="flex justify-between pt-1 border-t border-slate-700">
+                                <span>D. Carga Financiera Total (B + C)</span>
+                                <span class="text-white" id="dbg_carga_total">0 €</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-600">
+                            <p class="text-xs text-slate-400 mb-1">Ecuación: Ingresos = Carga Total / <span id="dbg_dti_divisor">0.35</span></p>
+                            <div class="flex justify-between font-bold text-sm">
+                                <span class="text-brand-300">Ingreso Mínimo Requerido =</span>
+                                <span class="text-brand-300" id="dbg_ingreso_final">0 €</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const taxData = {
+            "Andalucía": { itpG: 0.07, itpJ: 0.035, limJ: 35, ajdG: 0.012, ajdJ: 0.003, flip: 0.02 },
+            "Aragón": { itpG: "prog_aragon", itpJ: 0.04, limJ: 35, ajdG: 0.015, ajdJ: 0.015, flip: 0.02 },
+            "Asturias": { itpG: "prog_asturias", itpJ: 0.06, limJ: 35, ajdG: 0.012, ajdJ: 0.012, flip: null }, 
+            "Baleares": { itpG: "prog_baleares", itpJ: 0.04, limJ: 30, ajdG: 0.015, ajdJ: 0.012, flip: 0.02 },
+            "Canarias": { itpG: 0.065, itpJ: 0.05, limJ: 35, ajdG: 0.0075, ajdJ: 0.004, flip: null, isIgic: true },
+            "Cantabria": { itpG: 0.09, itpJ: 0.04, limJ: 36, ajdG: 0.015, ajdJ: 0.0015, flip: null },
+            "Castilla-La Mancha": { itpG: 0.09, itpJ: 0.05, limJ: 36, ajdG: 0.015, ajdJ: 0.0015, flip: null },
+            "Castilla y León": { itpG: 0.08, itpJ: 0.04, limJ: 36, ajdG: 0.015, ajdJ: 0.005, flip: null },
+            "Cataluña": { itpG: "prog_catalunya", itpJ: 0.05, limJ: 32, ajdG: 0.015, ajdJ: 0.005, flip: 0.03 }, 
+            "Madrid": { itpG: 0.06, itpJ: 0.06, limJ: 0, ajdG: 0.0075, ajdJ: 0.0075, flip: 0.02 },
+            "C. Valenciana": { itpG: 0.10, itpJ: 0.06, limJ: 35, ajdG: 0.015, ajdJ: 0.001, flip: 0.02 },
+            "Extremadura": { itpG: "prog_extremadura", itpJ: 0.04, limJ: 36, ajdG: 0.015, ajdJ: 0.001, flip: null },
+            "Galicia": { itpG: 0.08, itpJ: 0.03, limJ: 36, ajdG: 0.015, ajdJ: 0.005, flip: null },
+            "La Rioja": { itpG: 0.07, itpJ: 0.05, limJ: 36, ajdG: 0.01, ajdJ: 0.005, flip: null },
+            "Murcia": { itpG: 0.08, itpJ: 0.03, limJ: 40, ajdG: 0.015, ajdJ: 0.001, flip: 0.02 },
+            "Navarra": { itpG: 0.06, itpJ: 0.06, limJ: 0, ajdG: 0.005, ajdJ: 0.005, flip: null },
+            "País Vasco": { itpG: 0.07, itpJ: 0.04, limJ: 0, ajdG: 0.005, ajdJ: 0.005, flip: null } 
+        };
+
+        function calcProgressive(price, brackets) {
+            let totalTax = 0;
+            for (let i = 0; i < brackets.length; i++) {
+                let lowerLimit = brackets[i][0];
+                let upperLimit = i + 1 < brackets.length ? brackets[i+1][0] : Infinity;
+                let rate = brackets[i][1];
+                if (price > lowerLimit) {
+                    totalTax += (Math.min(price, upperLimit) - lowerLimit) * rate;
+                }
+            }
+            return totalTax;
+        }
+
+        function calculateProgressiveITP(price, typeName) {
+            switch(typeName) {
+                case "prog_aragon": return calcProgressive(price, [[0, 0.08], [400000, 0.085], [450000, 0.09], [500000, 0.095], [750000, 0.10]]);
+                case "prog_asturias": return calcProgressive(price, [[0, 0.08], [300000, 0.09], [500000, 0.10]]);
+                case "prog_baleares": return calcProgressive(price, [[0, 0.08], [400000, 0.09], [600000, 0.10], [1000000, 0.12], [2000000, 0.13]]);
+                case "prog_catalunya": return calcProgressive(price, [[0, 0.10], [1000000, 0.11]]);
+                case "prog_extremadura": return calcProgressive(price, [[0, 0.08], [360000, 0.10], [600000, 0.11]]);
+                default: return price * 0.06;
+            }
+        }
+
+        function getTaxes(price, ccaa, tipoInmueble, edad, isFlipping) {
+            const rules = taxData[ccaa];
+            let principalTax = 0, principalLabel = "", ajdAmount = 0, ajdLabel = "";
+            if (tipoInmueble === 'segunda_mano') {
+                if (isFlipping && rules.flip !== null) { principalTax = price * rules.flip; principalLabel = `ITP Reventa (${(rules.flip*100).toFixed(1)}%)`; }
+                else {
+                    let isYoung = rules.limJ > 0 && edad <= rules.limJ;
+                    if (isYoung) { principalTax = price * rules.itpJ; principalLabel = `ITP Reducido (${(rules.itpJ*100).toFixed(1)}%)`; }
+                    else {
+                        if (typeof rules.itpG === 'string') { principalTax = calculateProgressiveITP(price, rules.itpG); principalLabel = `ITP Progresivo`; }
+                        else { principalTax = price * rules.itpG; principalLabel = `ITP (${(rules.itpG*100).toFixed(1)}%)`; }
+                    }
+                }
+            } else {
+                let ivaRate = (tipoInmueble === 'obra_nueva_vpo') ? 0.04 : 0.10;
+                principalTax = price * ivaRate; principalLabel = `IVA (${(ivaRate*100).toFixed(1)}%)`;
+                let ajdRate = (rules.limJ > 0 && edad <= rules.limJ) ? rules.ajdJ : rules.ajdG;
+                ajdAmount = price * ajdRate; ajdLabel = `AJD (${(ajdRate*100).toFixed(2)}%)`;
+            }
+            return { amount: principalTax + ajdAmount, principalTax, principalLabel, ajdAmount, ajdLabel };
+        }
+
+        function formatCurrency(num) { return Math.round(num).toLocaleString('es-ES') + ' €'; }
+
+        function calculate() {
+            const precio = parseFloat(document.getElementById('precio_compra').value) || 0;
+            const ltv_pct = parseFloat(document.getElementById('ltv_input').value) || 0;
+            const dti_pct = parseFloat(document.getElementById('dti_input').value) || 0;
+            const deudas = parseFloat(document.getElementById('deudas').value) || 0;
+            const interes = (parseFloat(document.getElementById('interes').value) || 0) / 100 / 12;
+            const meses = (parseInt(document.getElementById('plazo').value) || 0) * 12;
+            
+            const ltv = ltv_pct / 100;
+            const dti = dti_pct / 100;
+
+            const ccaa = document.getElementById('ccaa').value;
+            const tipoInmueble = document.getElementById('tipo_inmueble').value;
+            const edad = parseInt(document.getElementById('edad').value) || 35;
+            const isFlipping = document.getElementById('flipping').value === 'si';
+
+            const prestamo = precio * ltv;
+            const entrada = precio - prestamo;
+            const tax = getTaxes(precio, ccaa, tipoInmueble, edad, isFlipping);
+            const gastos = precio * 0.015;
+            const ahorrosTotal = entrada + tax.amount + gastos;
+
+            const cuota = (interes === 0) ? (prestamo / meses) : (prestamo * interes / (1 - Math.pow(1 + interes, -meses)));
+            const ingresosReq = (cuota + deudas) / dti;
+
+            document.getElementById('res_ahorros_req').innerText = formatCurrency(ahorrosTotal);
+            document.getElementById('res_ingresos_req').innerText = formatCurrency(ingresosReq);
+            document.getElementById('res_dti_label').innerText = `Bajo ratio del ${dti_pct}%`;
+            document.getElementById('res_ltv_label').innerText = `Préstamo a pedir (${ltv_pct}%)`;
+            document.getElementById('res_prestamo').innerText = formatCurrency(prestamo);
+            document.getElementById('res_cuota').innerText = formatCurrency(cuota) + "/mes";
+            document.getElementById('res_entrada').innerText = formatCurrency(entrada);
+            document.getElementById('label_impuesto').innerText = tax.principalLabel;
+            document.getElementById('res_impuestos').innerText = formatCurrency(tax.principalTax);
+            if (tax.ajdAmount > 0) {
+                document.getElementById('row_ajd').classList.remove('hidden');
+                document.getElementById('res_ajd').innerText = formatCurrency(tax.ajdAmount);
+            } else { document.getElementById('row_ajd').classList.add('hidden'); }
+            document.getElementById('res_gastos_fijos').innerText = formatCurrency(gastos);
+
+            // Debug
+            let reglaFiscal = "";
+            if(tipoInmueble === 'segunda_mano') {
+                if(isFlipping) reglaFiscal = taxData[ccaa].flip !== null ? "Reventa Prof. (Fijo Bonificado)" : "Reventa Prof. no bonificada (General)";
+                else reglaFiscal = (taxData[ccaa].limJ > 0 && edad <= taxData[ccaa].limJ) ? "ITP Bonificado Joven" : "ITP General / Progresivo";
+            } else {
+                reglaFiscal = tipoInmueble === 'obra_nueva_vpo' ? "IVA Superreducido (VPO) + AJD" : "IVA Reducido (Libre) + AJD";
+            }
+            
+            let tipoImpuestoStr = tax.principalLabel;
+            if(tax.ajdAmount > 0) tipoImpuestoStr += " + " + tax.ajdLabel;
+
+            document.getElementById('dbg_precio_p').innerText = formatCurrency(precio);
+            document.getElementById('dbg_entrada_pct').innerText = (100 - ltv_pct);
+            document.getElementById('dbg_entrada').innerText = formatCurrency(entrada);
+            document.getElementById('dbg_regla_impuesto').innerText = reglaFiscal;
+            document.getElementById('dbg_tipo_impuesto').innerText = tipoImpuestoStr;
+            document.getElementById('dbg_taxes').innerText = formatCurrency(tax.amount);
+            document.getElementById('dbg_gastos').innerText = formatCurrency(gastos);
+            document.getElementById('dbg_ahorros_totales').innerText = formatCurrency(ahorrosTotal);
+
+            document.getElementById('dbg_ltv_val').innerText = ltv_pct;
+            document.getElementById('dbg_prestamo_cap').innerText = formatCurrency(prestamo);
+            document.getElementById('dbg_dti_val_title').innerText = dti_pct;
+            document.getElementById('dbg_cuota_calc').innerText = formatCurrency(cuota);
+            document.getElementById('dbg_tasa').innerText = interes.toFixed(5);
+            document.getElementById('dbg_meses').innerText = meses;
+            document.getElementById('dbg_deudas_calc').innerText = formatCurrency(deudas);
+            document.getElementById('dbg_carga_total').innerText = formatCurrency(cuota + deudas);
+            document.getElementById('dbg_dti_divisor').innerText = dti.toFixed(2);
+            document.getElementById('dbg_ingreso_final').innerText = formatCurrency(ingresosReq);
+        }
+
+        window.onload = () => {
+            const selectCCAA = document.getElementById('ccaa');
+            Object.keys(taxData).sort().forEach(c => {
+                let opt = document.createElement('option'); opt.value = opt.text = c;
+                if(c === 'Madrid') opt.selected = true;
+                selectCCAA.appendChild(opt);
+            });
+            document.querySelectorAll('input, select').forEach(i => i.addEventListener('input', calculate));
+            
+            // Lógica UI Flipping
+            document.getElementById('flipping').addEventListener('change', (e) => {
+                const edadInput = document.getElementById('edad');
+                if(e.target.value === 'si') {
+                    edadInput.disabled = true;
+                    edadInput.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    edadInput.disabled = false;
+                    edadInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                calculate();
+            });
+
+            // Lógica UI Tipo Inmueble
+            document.getElementById('tipo_inmueble').addEventListener('change', (e) => {
+                const flipSelect = document.getElementById('flipping');
+                if(e.target.value !== 'segunda_mano') {
+                    flipSelect.value = 'no';
+                    flipSelect.disabled = true;
+                    flipSelect.classList.add('opacity-50', 'cursor-not-allowed');
+                    
+                    const edadInput = document.getElementById('edad');
+                    edadInput.disabled = false;
+                    edadInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    flipSelect.disabled = false;
+                    flipSelect.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                calculate();
+            });
+            
+            document.getElementById('toggle_debug').addEventListener('click', () => document.getElementById('debug_content').classList.toggle('hidden'));
+            calculate();
+        };
+    </script>
+</body>
+</html>
