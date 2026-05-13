@@ -96,7 +96,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-600 mb-1">Edad Mayor Comprador</label>
-                            <input type="number" id="edad" value="35" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                            <input type="number" id="edad" value="40" class="w-full rounded-lg border-slate-300 border p-2.5 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-600 mb-1">¿Inversor (Flipping)?</label>
@@ -134,7 +134,7 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-600 mb-1">Deudas Actuales (Préstamos/mes)</label>
                         <div class="relative">
-                            <input type="number" id="deudas" value="300" class="w-full rounded-lg border-slate-300 border p-2.5 pl-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
+                            <input type="number" id="deudas" value="0" class="w-full rounded-lg border-slate-300 border p-2.5 pl-8 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 transition">
                             <span class="absolute left-3 top-2.5 text-slate-400">€</span>
                         </div>
                     </div>
@@ -368,7 +368,7 @@
 
             const ccaa = document.getElementById('ccaa').value;
             const tipoInmueble = document.getElementById('tipo_inmueble').value;
-            const edad = parseInt(document.getElementById('edad').value) || 35;
+            const edad = parseInt(document.getElementById('edad').value) || 40;
             const isFlipping = document.getElementById('flipping').value === 'si';
 
             const prestamo = precio * ltv;
@@ -432,7 +432,7 @@
             const selectCCAA = document.getElementById('ccaa');
             Object.keys(taxData).sort().forEach(c => {
                 let opt = document.createElement('option'); opt.value = opt.text = c;
-                if(c === 'Madrid') opt.selected = true;
+                if(c === 'Galicia') opt.selected = true;
                 selectCCAA.appendChild(opt);
             });
             document.querySelectorAll('input, select').forEach(i => i.addEventListener('input', calculate));
